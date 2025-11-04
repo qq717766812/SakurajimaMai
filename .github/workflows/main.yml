@@ -1,47 +1,68 @@
 name: SakurajimaMai
 
 on:
-    push:
-        branches:
-          - main
-    workflow_dispatch:
-    schedule:
-        - cron: '0 0/4 * * *'
-    repository_dispatch:
-        types: joy
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0/4 * * *'
 
 jobs:
-    run:
-        runs-on: self-hosted
-        strategy:
-            matrix:
-                python-version: [3.9]
-        steps:
-            - name: Checkout
-              run: |
-                export selfhosted_home=~
-                if [ ! -d "$selfhosted_home/SakurajimaMai" ]; then
-                  git clone https://github.com/0Chencc/SakurajimaMai $selfhosted_home/SakurajimaMai
-                fi
-            - uses: actions/checkout@v2
-            - name: Set up Python ${{ matrix.python-version }}
-              uses: actions/setup-python@v2
-              with:
-                python-version: ${{ matrix.python-version }}
-            - name: Install dependencies
-              run: |
-                  python3.9 -m pip install --upgrade pip
-                  if [ -f requirements.txt ]; then python3.9 -m pip install -r requirements.txt ; fi
-            - name: 'SakurajimaMai'
-              run: |
-                  python3.9 ./src/main.py
-              env:
-                  BREAKFAST: ${{ secrets.BREAKFAST }}
-                  LUNCH: ${{ secrets.LUNCH }}
-                  DINNER: ${{ secrets.DINNER }}
-                  WB_UIDS: ${{ secrets.WB_UIDS }}
-                  BUPIDS: ${{ secrets.BUPIDS }}
-                  BAIDS: ${{ secrets.BAIDS }}
-                  AUPIDS: ${{ secrets.AUPIDS }}
-                  SECRET: ${{ secrets.SECRET }}
-                  WEBHOOK: ${{ secrets.WEBHOOK }}
+  run:
+    runs-on: self-hosted
+    
+    steps:
+      - name: Check Python Version
+        run: |
+          echo "=== 检查Python版本 ==="
+          python3.9 --version || python3 --version
+          echo "Python路径: $(which python3.9 2>/dev/null || which python3)"
+
+      - name: Clone Repository
+        run: |
+          cd ~
+          if [ ! -d "SakurajimaMai" ]; then
+            git clone https://github.com/qq717766812/SakurajimaMai
+          else
+            cd SakurajimaMai
+            git pull origin main
+          fi
+
+      - name: Setup Python Environment
+        run: |
+          cd ~/SakurajimaMai
+          echo "=== 设置Python环境 ==="
+          
+          # 使用可用的Python版本
+          if command -v python3.9 >/dev/null 2>&1; then
+            PYTHON_CMD="python3.9"
+          else
+            PYTHON_CMD="python3"
+          fi
+          
+          echo "使用: $($PYTHON_CMD --version)"
+          $PYTHON_CMD -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip -i https://pypi.tuna.tsinghua.edu.cn/simple/
+
+      - name: Install Dependencies
+        run: |
+          cd ~/SakurajimaMai
+          source venv/bin/activate
+          pip install requests pytz python-dotenv requests-html -i https://pypi.tuna.tsinghua.edu.cn/simple/
+
+      - name: Run Application
+        run: |
+          cd ~/SakurajimaMai
+          source venv/bin/activate
+          python src/main.py
+        env:
+          BREAKFAST: ${{ secrets.BREAKFAST }}
+          LUNCH: ${{ secrets.LUNCH }}
+          DINNER: ${{ secrets.DINNER }}
+          WB_UIDS: ${{ secrets.WB_UIDS }}
+          BUPIDS: ${{ secrets.BUPIDS }}
+          BAIDS: ${{ secrets.BAIDS }}
+          AUPIDS: ${{ secrets.AUPIDS }}
+          SECRET: ${{ secrets.SECRET }}
+          WEBHOOK: ${{ secrets.WEBHOOK }}
